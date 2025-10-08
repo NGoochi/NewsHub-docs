@@ -400,7 +400,7 @@ Worker Separation: Optional future Render service for independent processing.
 
 Authentication: Currently single-user; OAuth planned for future expansion.
 
-🚧 Development Phases
+🚧 Development Phases - Backend
 Phase	Description	Status
 1	Express + Prisma base, database migration	✅ Complete
 2	CRUD endpoints for Projects, Articles, Quotes	✅ Complete
@@ -408,7 +408,17 @@ Phase	Description	Status
 4	Gemini analysis + batch processing system	✅ Complete
 5	Google Sheets export	🔧 Routes Implemented (needs verification)
 6	Settings + editable prompts	🔧 Stub Only (returns placeholders)
-7	Optional UI frontend (React)	🔜 Deferred
+
+🚧 Development Phases - Frontend
+Phase	Description	Status
+1	Projects (Foundation) - Dashboard with project CRUD	✅ Complete
+2	Import (Data Entry) - Article import workflow with progress	✅ Complete
+3	Analysis (Core Value) - Batch analysis with Gemini	✅ Complete
+4	Quotes (Secondary Value) - Quote display and management	🔜 Pending
+5	Export (Output) - Google Sheets export	🔜 Pending
+6	Polish - Error handling, responsive design, loading states	🔜 Pending
+
+**Note:** Mark phases with ✅ as they are completed.
 
 ## Implemented Features
 
