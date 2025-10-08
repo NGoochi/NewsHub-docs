@@ -9,6 +9,7 @@ Welcome to the NewsHub project documentation. This index provides a comprehensiv
 | [`definitions.md`](./definitions.md) | Global terminology and data model definitions for Projects, Articles, Quotes, and core processes |
 | [`manifest.md`](./manifest.md) | Repository structure map and component purpose guide |
 | [`instructions.md`](./instructions.md) | System architecture, development conventions, and phase tracking |
+| [`frontend-starter.md`](./frontend-starter.md) | Complete frontend development guide with API reference and implementation roadmap |
 
 ## 🔌 Integration Documentation
 
@@ -40,12 +41,13 @@ Welcome to the NewsHub project documentation. This index provides a comprehensiv
 
 ## 🚀 Quick Navigation
 
-### For Developers
+### For Backend Developers
 - **Getting Started**: [`instructions.md`](./instructions.md) - System architecture and development setup
 - **Data Models**: [`definitions.md`](./definitions.md) - Core terminology and data structures
 - **File Structure**: [`manifest.md`](./manifest.md) - Repository organization
 
 ### For Frontend Development
+- **🎯 START HERE**: [`frontend-starter.md`](./frontend-starter.md) - Complete guide to building the React frontend
 - **Design System**: [`style-guidelines.md`](./style-guidelines.md) - UI styling and component patterns
 - **Page Layouts**: [`/UI/`](./UI/) - Detailed specifications for all major pages
 - **Component Architecture**: [`/UI/dashboard.md`](./UI/dashboard.md), [`/UI/project.md`](./UI/project.md), [`/UI/settings.md`](./UI/settings.md)
@@ -61,9 +63,10 @@ Current development phase and completion status can be found in [`instructions.m
 **Latest Updates:**
 - ✅ Phase 1: Express + Prisma base
 - ✅ Phase 2: CRUD endpoints  
-- ✅ Phase 3: NewsAPI integration
-- ✅ Phase 4: Gemini analysis + batching queue
-- 🔜 Phase 5: Google Sheets export
+- ✅ Phase 3: NewsAPI.ai integration with session-based imports
+- ✅ Phase 4: Gemini analysis + batch processing system
+- 🔧 Phase 5: Google Sheets export (routes implemented, needs verification)
+- ⚠️ Phase 6: Settings system (stub implementation only)
 
 ---
 

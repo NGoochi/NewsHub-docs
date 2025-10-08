@@ -33,30 +33,34 @@ Integrations: NewsAPI, Gemini API, Google Sheets API
 src/
   index.ts                 → Entry point / server setup
   routes/                  → Express routes
-    projects.ts
-    articles.ts
-    quotes.ts
-    analysis.ts
-    settings.ts
+    projects.ts            → Project CRUD endpoints
+    articles.ts            → Article CRUD endpoints
+    quotes.ts              → Quote CRUD endpoints
+    import.ts              → Import preview, start, session management
+    analysis.ts            → Analysis batch creation and management
+    export.ts              → Google Sheets export endpoints
+    settings.ts            → Settings endpoints (placeholder)
   controllers/             → Business logic for routes
-    projectController.ts
-    articleController.ts
-    quoteController.ts
-    analysisController.ts
+    projectController.ts   → Project CRUD operations
+    articleController.ts   → Article CRUD and project queries
+    quoteController.ts     → Quote CRUD operations
+    importController.ts    → Import workflow coordination
+    analysisController.ts  → Analysis batch orchestration
+    exportController.ts    → Export to Google Sheets
+    settingsController.ts  → Settings management (stub)
   lib/
     db.ts                  → Prisma client instance
-    newsapi.ts             → Handles NewsAPI calls
-    gemini.ts              → Handles Gemini analysis requests
+    newsapi.ts             → NewsAPI.ai client and data normalization
+    importService.ts       → Import workflow orchestration
+    importSession.ts       → Async import session management
+    analysisBatch.ts       → Analysis batch processing service
+    gemini.ts              → Gemini API integration (analysis + quotes)
     sheets.ts              → Google Sheets export helper
-  jobs/
-    queue.ts               → Job queue manager for Gemini batching
-    worker.ts              → Background processor
   utils/
-    formatters.ts          → Data cleaning and transformation utilities
+    constants.ts           → Shared constants and enums
+    errorHandler.ts        → Express error middleware
+    formatters.ts          → Data cleaning and transformation
     validation.ts          → Input validation helpers
-  docs/
-    definitions.md          (terminology reference)
-    instructions.md         (this file)
 
 ⚙️ Server Responsibilities
 Express Application
@@ -84,126 +88,256 @@ Enforces enums for inputMethod and sentimentGemini
 APIs
 Function	Route	Description
 Project Management	/projects	CRUD for projects
-Article Import	/articles/import	Calls NewsAPI, normalises, inserts to DB
-Article CRUD	/articles/:id	View/edit/delete article
-Quote CRUD	/quotes/:id	View/edit/delete quote
-Run Analysis	/analysis/run	Accepts array of article IDs; enqueues Gemini jobs
-Job Status	/analysis/status/:projectId	Returns progress summary
-Export	/export/:projectId	Builds and sends data to Google Sheets
-Settings	/settings	Read/write Gemini prompt fragments and category definitions
+Project Details	/projects/:id	Get specific project with metadata
+Article CRUD	/articles	Get all articles (with query params)
+Article by Project	/articles/project/:projectId	Get all articles for a project
+Article Details	/articles/:id	Get/update/delete specific article
+Import Preview	/import/preview	Preview estimated article count before importing
+Start Import	/import/start	Creates ImportSession and begins async import
+Import Session Status	/import/session/:sessionId	Get status of ongoing/completed import
+Cancel Import	/import/session/:sessionId/cancel	Cancel a running import session
+Project Import Sessions	/import/project/:projectId/sessions	Get all import sessions for a project
+Project Stats	/import/project/:projectId/stats	Get import statistics for a project
+Get Sources	/import/sources	Get all available news sources
+Get Countries	/import/countries	Get list of available countries
+Get Languages	/import/languages	Get list of available languages
+Create Analysis Batch	/analysis/batch	Create new batch for up to 10 articles
+Start Analysis	/analysis/batch/:batchId/start	Begin processing an analysis batch
+Batch Status	/analysis/batch/:batchId	Get status of specific analysis batch
+Cancel Batch	/analysis/batch/:batchId/cancel	Cancel a running analysis batch
+Project Batches	/analysis/project/:projectId/batches	Get all analysis batches for a project
+Quote CRUD	/quotes	Get all quotes (with query params)
+Quote Details	/quotes/:id	Get/update/delete specific quote
+Export to Sheets	/export/:projectId	Builds and sends data to Google Sheets
+Export Status	/export/status/:projectId	Get export status for a project
+Download Export	/export/download/:projectId	Download export file
+Settings	/settings	Get application settings (placeholder)
+Prompts	/settings/prompts	Get/update Gemini prompts (placeholder)
+Categories	/settings/categories	Get/update category definitions (placeholder)
 🧠 Data Flow Overview
 1. Creating a Project
 
-User hits /projects → POST
+User hits /projects → POST with { name, description }
 
-Database creates entry with name + optional description
+Database creates entry with timestamps
 
-Returns project ID for later references
+Returns project object with ID for later references
 
-2. Importing Articles
+2. Importing Articles (Session-based Workflow)
 
-Client posts search parameters (query, date range) to /articles/import
+**Step 1: Preview**
 
-Backend calls NewsAPI
+Client posts search parameters to /import/preview
+```json
+{
+  "projectId": "uuid",
+  "searchTerms": ["climate", "COP30"],
+  "sourceIds": ["bbc.co.uk", "reuters.com"],
+  "startDate": "2025-01-01",
+  "endDate": "2025-01-31"
+}
+```
 
-Normalises response → creates Article records
+Backend queries SearchSource database and estimates article count
 
-Returns article count + list of IDs
+Returns preview data: estimated count, selected sources, date range
 
-3. Running Analysis
+**Step 2: Start Import**
 
-Client selects articles → sends array of IDs to /analysis/run
+Client confirms and posts same parameters to /import/start
 
-Each article becomes a job (stored in queue table)
+Backend creates ImportSession record with status "running"
 
-Worker processes jobs in batches of ≤10 per Gemini call
+Returns session ID immediately for monitoring
 
-Gemini returns JSON array of structured fields (summary, category, sentiment, quotes)
+**Step 3: Async Processing**
 
-Controller updates Articles and inserts Quotes
+ImportSession.processImportSession() runs in background
 
-When complete, marks analysedAt
+Fetches articles from NewsAPI.ai in batches
 
-4. Monitoring Jobs
+Saves articles to database with importSessionId link
 
-Client polls /analysis/status/:projectId
+Updates session: articlesFound, articlesImported
 
-Server queries queue for progress:
+**Step 4: Monitor Progress**
 
-queued, processing, completed, failed
+Frontend polls /import/session/:sessionId
 
-Returns stats + estimated completion time
+Backend returns current status, counts, errors
+
+When complete, status becomes "completed" or "failed"
+
+3. Running Analysis (Batch-based Workflow)
+
+**Step 1: Create Batch**
+
+User selects up to 10 unanalyzed articles
+
+Client posts to /analysis/batch
+```json
+{
+  "projectId": "uuid",
+  "articleIds": ["article-uuid-1", "article-uuid-2", ...]
+}
+```
+
+Backend creates AnalysisBatch record with status "pending"
+
+Returns batch ID for monitoring
+
+**Step 2: Start Processing**
+
+Client posts to /analysis/batch/:batchId/start
+
+Backend updates status to "running"
+
+Fetches article content from database
+
+**Step 3: Gemini Processing**
+
+Sends batch to analyzeArticles() - returns summaries, categories, sentiment
+
+Sends batch to extractQuotes() - returns stakeholder quotes
+
+Updates Article records with analysis results
+
+Creates Quote records linked to articles
+
+Updates AnalysisBatch: processedArticles++, results stored
+
+**Step 4: Monitor Progress**
+
+Frontend polls /analysis/batch/:batchId
+
+Backend returns status, totalArticles, processedArticles
+
+When complete, status becomes "completed", "failed", or "cancelled"
+
+**For Large Projects**: Frontend can create multiple batches of 10 articles each
+
+4. Viewing Results
+
+Client fetches /articles/project/:projectId for all articles
+
+Each article now has summaryGemini, categoryGemini, sentimentGemini populated
+
+Client fetches /quotes?projectId=X to see extracted stakeholder quotes
+
+Quotes linked back to source articles via articleId
 
 5. Exporting Data
 
 User triggers /export/:projectId
 
-Server gathers Articles + Quotes
+Server gathers all Articles + Quotes for project
 
-Builds JSON → sends to Google Sheets API → creates spreadsheet with two tabs:
+Formats data and sends to Google Sheets API
 
-Articles
+Creates spreadsheet with two tabs: Articles, Quotes
 
-Quotes
+Returns shareable link to the created sheet
 
-Returns link to the created sheet
+Note: Export implementation requires verification
 
 🧩 Module Responsibilities
 /lib/db.ts
 
 Exports a single Prisma client instance shared across all controllers:
 
+```typescript
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export default prisma;
+```
 
 /lib/newsapi.ts
 
-Handles all NewsAPI queries
+Provides NewsAPIClient class for interacting with NewsAPI.ai
 
-Sanitises and normalises data before DB insert
+Builds search requests with filters (keywords, sources, dates)
 
-Abstracts away API keys and endpoints
+Fetches articles from NewsAPI.ai REST API
 
-Returns array of Article objects ready for insertion
+Normalizes response data into Article schema format
+
+Handles pagination and error responses
+
+/lib/importService.ts
+
+Orchestrates the article import workflow
+
+Implements ImportService class with preview and start methods
+
+Validates search parameters and source selections
+
+Creates and manages ImportSession records
+
+Coordinates between NewsAPIClient and ImportSessionManager
+
+/lib/importSession.ts
+
+Implements ImportSessionManager class for async import processing
+
+Creates ImportSession database records
+
+Processes imports asynchronously in background
+
+Fetches articles in batches from NewsAPI.ai
+
+Saves articles to database with deduplication logic
+
+Updates session status and progress counters
 
 /lib/gemini.ts
 
-Builds the Gemini API request payloads
+Handles all Gemini API communication
 
-Accepts up to 10 articles per request
+Loads prompt templates from /docs/prompts/ directory
 
-Sends structured JSON and parses response
+Implements analyzeArticles() - sends up to 10 articles, returns analysis
 
-Handles retries, rate limiting, and JSON schema validation
+Implements extractQuotes() - extracts stakeholder quotes
+
+Loads category definitions from category-definitions.md
+
+Parses Gemini JSON responses and validates structure
+
+Handles API errors and retries
+
+/lib/analysisBatch.ts
+
+Implements AnalysisBatchService class for batch analysis workflow
+
+Creates AnalysisBatch records in database
+
+Orchestrates dual analysis: articles + quotes
+
+Manages batch lifecycle: pending → running → completed/failed
+
+Updates Article records with Gemini results
+
+Creates Quote records from extracted quotes
+
+Tracks progress: processedArticles / totalArticles
+
+Supports batch cancellation
 
 /lib/sheets.ts
 
-Manages Google OAuth token storage
+Manages Google Sheets export functionality
+
+Handles Google OAuth authentication
 
 Accepts project ID → fetches Articles + Quotes
 
-Creates or updates a Google Sheet with two tabs
+Formats data for spreadsheet export
+
+Creates Google Sheet with two tabs (Articles, Quotes)
 
 Returns shareable URL
 
-/jobs/queue.ts
-
-Handles job creation, retrieval, and deletion
-
-Stores job state: queued, processing, done, error
-
-Groups jobs into batches of 10 for Gemini processing
-
-/jobs/worker.ts
-
-Periodically runs (setInterval or Render cron)
-
-Pulls queued jobs, executes Gemini API calls
-
-Updates DB with results
-
-Marks completion
+Note: Implementation exists but requires verification
 
 🖥️ UI-Independent Design Philosophy
 
@@ -260,28 +394,59 @@ Authentication: Currently single-user; OAuth planned for future expansion.
 Phase	Description	Status
 1	Express + Prisma base, database migration	✅ Complete
 2	CRUD endpoints for Projects, Articles, Quotes	✅ Complete
-3	NewsAPI integration + article import	✅ Complete
-4	Gemini analysis + batching queue	✅ Complete
-5	Google Sheets export	Planned
-6	Settings + editable prompts	Planned
-7	Optional UI frontend (React)	Deferred
+3	NewsAPI.ai integration + session-based import	✅ Complete
+4	Gemini analysis + batch processing system	✅ Complete
+5	Google Sheets export	🔧 Routes Implemented (needs verification)
+6	Settings + editable prompts	🔧 Stub Only (returns placeholders)
+7	Optional UI frontend (React)	🔜 Deferred
 
-## Still to do:
+## Implemented Features
 
-### For NewsAPI:
-- Clean up search parameter page, add extra parameters?
-- Add a settings dialogue that allows user to add/delete search sources, languages, countries.
-- Develop UI to show articles in realtime as they come in.
-- Clean up boolean search option, make a nice little UI for building a boolean search.
+### Import System ✅
+- Session-based import with preview functionality
+- Source filtering by country, language, region
+- Progress tracking with ImportSession records
+- Async processing with status monitoring
+- Boolean query support for advanced searches
+
+### Analysis System ✅
+- Batch-based processing (up to 10 articles per batch)
+- Dual analysis: article summaries + quote extraction
+- Progress tracking with AnalysisBatch records
+- Cancellation support
+- Category definitions loaded from prompts/category-definitions.md
+
+### Data Model ✅
+- Full NewsAPI.ai integration with extended fields
+- Import session history tracking
+- Analysis batch history tracking
+- Source management database (SearchSource)
+
+## Still To Do
+
+### High Priority:
+- **Settings Implementation**: Replace placeholder endpoints with actual settings storage
+  - Store API keys in database (encrypted)
+  - Allow category editing through API
+  - Enable prompt customization
+- **Export Verification**: Test and verify Google Sheets export functionality
+- **Frontend UI**: Build React dashboard to consume all these APIs
+
+### For NewsAPI Import:
+- Add UI for real-time article preview during import
+- Enhanced boolean query builder interface
+- Additional NewsAPI.ai filter parameters (sentiment range, source ranking)
 
 ### For Gemini Analysis:
-- **Batch Processing Enhancement**: Send off analysis requests in greater than 10 numbers, but make it so 10 articles can be analyzed at a time, include real-time results as they complete.
-- **Category Management**: Fix categorisation - make sure categories are uploaded to database and can be edited from a settings page.
+- **Multi-batch Orchestration**: Auto-split large article sets into multiple batches of 10
+- **Translation Detection**: Enhance prompts to better detect non-English articles
+- **Category Database Storage**: Move categories from markdown file to database for editing
 
-### Not So Urgent:
-- **Translation Model**: Include a translation model - will need its own prompt, etc. dynamic so offer to translate if article is not English.
-- **Stakeholder Tracking**: Per-project stakeholder tracking.
-- **Report Generation**: Generate a single page report from selected analysed articles, this will be another prompt/formatted call. - ability to download report as a PDF.
+### Nice to Have:
+- **Stakeholder Tracking**: Aggregate quotes by stakeholder across projects
+- **Report Generation**: Generate summary reports from analyzed articles with PDF export
+- **Retry Logic**: Auto-retry failed batches with exponential backoff
+- **Webhook Notifications**: Notify when imports/analysis complete
 🧩 Coding Style Reference
 
 Functions use camelCase.
