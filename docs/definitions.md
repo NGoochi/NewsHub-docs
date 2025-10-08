@@ -183,6 +183,60 @@ updatedAt – timestamp of last modification
 
 Relationships: none (reference data)
 
+PromptTemplate
+
+Stores Gemini AI prompts with versioning support, allowing system prompts to be managed in the database rather than files.
+
+Fields:
+
+id – unique UUID
+
+type – prompt type: "article-analysis" or "quote-analysis"
+
+content – full prompt text (stored as TEXT)
+
+version – version number (integer)
+
+isActive – boolean; whether this version is currently active
+
+createdAt – timestamp when version was created
+
+updatedAt – timestamp of last modification
+
+createdBy – future: user ID who created this version (nullable)
+
+description – optional notes about this version
+
+Relationships: none (standalone reference data)
+
+Note: Only backend can modify prompts. Changes require database access as prompts rely on data structure dependencies.
+
+Category
+
+Represents an article classification category with definition and keywords for Gemini AI analysis.
+
+Fields:
+
+id – unique UUID
+
+name – unique category name (e.g., "COP30", "Finance", "Amazon")
+
+definition – description of what articles belong in this category (TEXT)
+
+keywords – array of keyword strings for matching
+
+isActive – boolean; whether category is available for use
+
+sortOrder – integer for custom ordering in UI
+
+createdAt – timestamp when created
+
+updatedAt – timestamp of last modification
+
+Relationships: none (reference data)
+
+Note: Managed via `/categories` API. All CRUD operations automatically clear Gemini cache to ensure fresh data.
+
 🧠 Core Processes
 Article Import (Session-based)
 
@@ -318,8 +372,14 @@ Import workflow pattern where operations are tracked via ImportSession records, 
 Batch Processing
 Analysis workflow where multiple articles (max 10) are sent to Gemini in a single API request for efficiency and cost optimization.
 
+Prompt Caching
+Gemini prompts and categories are loaded from database and cached for 5 minutes to optimize performance. Cache automatically clears when categories are modified via API.
+
+Category Management
+Categories are stored in the database and editable via REST API. Changes trigger cache invalidation to ensure Gemini uses updated definitions immediately.
+
 System I/O Contract
-An admin-only specification defining the strict JSON schema Gemini must follow when returning analysed data for insertion into the database. Defined in prompt templates (article-analysis.md, quote-analysis.md).
+An admin-only specification defining the strict JSON schema Gemini must follow when returning analysed data for insertion into the database. Stored in PromptTemplate table, backed up in markdown files for reference.
 
 🧩 Planned Integrations
 

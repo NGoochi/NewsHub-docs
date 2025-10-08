@@ -42,6 +42,7 @@ import.ts	Import preview, start, session status, source management
 analysis.ts	Analysis batch creation, start, status, cancellation
 export.ts	Export project data to Google Sheets
 settings.ts	App settings and configuration (placeholder implementation)
+categories.ts	Category CRUD and reorder operations
 /src/controllers
 
 Implements logic for each route.
@@ -53,6 +54,7 @@ articleController.ts	Insert, fetch, edit, delete Articles; query by project	✅ 
 quoteController.ts	CRUD for Quotes	✅ Implemented
 importController.ts	Preview imports, start sessions, monitor progress, source management	✅ Implemented
 analysisController.ts	Create batches, start processing, monitor status, cancel batches	✅ Implemented
+categoryController.ts	CRUD for categories, reorder, cache invalidation	✅ Implemented
 exportController.ts	Generate and send Google Sheets exports	🔧 Routes exist, needs verification
 settingsController.ts	Manage settings, prompts, categories	⚠️ Stub only (returns placeholders)
 /src/lib
@@ -88,7 +90,7 @@ constants.ts	Shared config (e.g., sentiment enums, status codes)
 Prisma ORM setup.
 
 File	Description
-schema.prisma	Database schema: Project, Article, Quote, ImportSession, AnalysisBatch, AnalysisJob, SearchSource
+schema.prisma	Database schema: Project, Article, Quote, ImportSession, AnalysisBatch, AnalysisJob, SearchSource, PromptTemplate, Category
 /migrations/	Auto-generated SQL migration history
 
 Key Models:
@@ -99,6 +101,8 @@ Key Models:
 - **AnalysisBatch**: Groups articles for batch Gemini processing
 - **SearchSource**: Reference data for available news sources
 - **AnalysisJob**: Individual job records (used alongside batches)
+- **PromptTemplate**: Stores Gemini prompts with versioning (article-analysis, quote-analysis)
+- **Category**: Article classification categories with definitions and keywords
 /docs
 
 Contains all internal documentation and AI context files.

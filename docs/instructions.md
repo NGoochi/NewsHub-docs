@@ -113,7 +113,13 @@ Export Status	/export/status/:projectId	Get export status for a project
 Download Export	/export/download/:projectId	Download export file
 Settings	/settings	Get application settings (placeholder)
 Prompts	/settings/prompts	Get/update Gemini prompts (placeholder)
-Categories	/settings/categories	Get/update category definitions (placeholder)
+Categories (Legacy)	/settings/categories	Get/update category definitions (placeholder - deprecated)
+Get Categories	/categories	Get all categories (active by default)
+Get Category	/categories/:id	Get specific category by ID
+Create Category	/categories	Create new category with name, definition, keywords
+Update Category	/categories/:id	Update category fields
+Delete Category	/categories/:id	Soft delete category (set isActive=false)
+Reorder Categories	/categories/reorder	Batch update sortOrder for multiple categories
 🧠 Data Flow Overview
 1. Creating a Project
 
@@ -293,17 +299,21 @@ Updates session status and progress counters
 
 Handles all Gemini API communication
 
-Loads prompt templates from /docs/prompts/ directory
+Loads prompt templates from database (PromptTemplate table) with 5-minute cache
 
 Implements analyzeArticles() - sends up to 10 articles, returns analysis
 
 Implements extractQuotes() - extracts stakeholder quotes
 
-Loads category definitions from category-definitions.md
+Loads category definitions from database (Category table) with 5-minute cache
+
+Exports clearPromptCache() - called when categories are updated via API
 
 Parses Gemini JSON responses and validates structure
 
 Handles API errors and retries
+
+Note: Prompts and categories cached for 5 minutes to optimize performance. Cache automatically cleared on category modifications.
 
 /lib/analysisBatch.ts
 

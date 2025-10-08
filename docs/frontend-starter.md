@@ -208,7 +208,76 @@ GET /quotes?projectId=:projectId  → All quotes in project
 
 ---
 
-### 5. Export
+### 5. Category Management
+
+Categories are now stored in the database and fully editable through the API.
+
+#### Get All Categories
+```
+GET /categories
+→ Returns array of categories ordered by sortOrder
+```
+
+Query params:
+- `includeInactive=true` - Include deactivated categories
+
+#### Create Category
+```
+POST /categories
+Body: {
+  "name": "New Category",
+  "definition": "Description of what belongs here",
+  "keywords": ["keyword1", "keyword2", "keyword3"],
+  "sortOrder": 99  // optional, auto-calculated if omitted
+}
+→ Returns: created category
+```
+
+**UI Pattern:** Form with name (required), definition (required), keywords (array input), sortOrder (optional).
+
+#### Update Category
+```
+PUT /categories/:id
+Body: {
+  "name": "Updated Name",           // optional
+  "definition": "Updated definition", // optional
+  "keywords": ["new", "keywords"],   // optional
+  "sortOrder": 5,                    // optional
+  "isActive": true                   // optional
+}
+→ Returns: updated category
+```
+
+**UI Pattern:** Edit form, all fields optional (only send changed fields).
+
+#### Delete Category
+```
+DELETE /categories/:id
+→ Soft deletes (sets isActive = false)
+```
+
+**UI Pattern:** Confirmation dialog before deletion.
+
+#### Reorder Categories
+```
+PUT /categories/reorder
+Body: {
+  "categoryOrders": [
+    { "id": "uuid-1", "sortOrder": 0 },
+    { "id": "uuid-2", "sortOrder": 1 },
+    { "id": "uuid-3", "sortOrder": 2 }
+  ]
+}
+→ Returns: success confirmation
+```
+
+**UI Pattern:** Drag-and-drop interface, batch update on completion.
+
+**Important:** All category modifications automatically clear the backend cache, so changes are reflected immediately in analysis.
+
+---
+
+### 6. Export
 
 ```
 POST /export/:projectId
@@ -375,12 +444,20 @@ Build in order of user workflow:
 2. Display quotes grouped by stakeholder
 3. Link quotes back to source articles
 
-### Phase 5: Export (Output)
+### Phase 5: Category Management (Settings)
+1. Settings page with Categories tab
+2. Display category list with sortable table
+3. Create category form (name, definition, keywords)
+4. Edit category inline or in modal
+5. Delete category with confirmation
+6. Drag-and-drop reordering with batch update
+
+### Phase 6: Export (Output)
 1. Export button
 2. Loading state
 3. Open Google Sheet link
 
-### Phase 6: Polish
+### Phase 7: Polish
 1. Error handling and user feedback (toasts)
 2. Empty states and loading skeletons
 3. Responsive design (mobile/tablet)
@@ -433,6 +510,18 @@ Build in order of user workflow:
 | GET | `/quotes` | `?projectId=X` or `?articleId=Y` | Array of quotes |
 | GET | `/quotes/:id` | — | Single quote |
 | DELETE | `/quotes/:id` | — | Success confirmation |
+
+### Categories
+| Method | Endpoint | Body | Returns |
+|--------|----------|------|---------|
+| GET | `/categories` | — (query: `?includeInactive=true`) | Array of categories |
+| GET | `/categories/:id` | — | Single category |
+| POST | `/categories` | `{ name, definition, keywords[], sortOrder? }` | Created category |
+| PUT | `/categories/:id` | `{ name?, definition?, keywords?, sortOrder?, isActive? }` | Updated category |
+| DELETE | `/categories/:id` | — | Success confirmation (soft delete) |
+| PUT | `/categories/reorder` | `{ categoryOrders: [{id, sortOrder}] }` | Success confirmation |
+
+**Note:** All category modifications automatically clear the Gemini cache to ensure fresh data.
 
 ### Export
 | Method | Endpoint | Body | Returns |
@@ -509,6 +598,8 @@ Your frontend is ready when:
 - [ ] Implement import workflow with preview + progress
 - [ ] Implement analysis workflow with batch creation + progress
 - [ ] Add quotes tab
+- [ ] Add category management page (Settings → Categories tab)
+- [ ] Implement category CRUD (create, edit, delete, reorder)
 - [ ] Add export button
 - [ ] Polish UI (loading states, errors, toasts)
 - [ ] Test all workflows end-to-end
