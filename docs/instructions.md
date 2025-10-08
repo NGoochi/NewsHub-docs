@@ -309,6 +309,10 @@ Loads category definitions from database (Category table) with 5-minute cache
 
 Exports clearPromptCache() - called when categories are updated via API
 
+Configurable timeout via GEMINI_TIMEOUT_MS environment variable (default: 300000ms / 5 minutes)
+
+Progress indicators: logs start time, article count, timeout value, completion time, and results summary
+
 Parses Gemini JSON responses and validates structure
 
 Handles API errors and retries
@@ -379,7 +383,9 @@ Environment variables stored in .env:
 
 DATABASE_URL=
 NEWS_API_KEY=
+NEWSAPI_MAX_TOTAL_ARTICLES=100  # Max articles per NewsAPI search (default: 100)
 GEMINI_API_KEY=
+GEMINI_TIMEOUT_MS=300000  # Gemini API timeout in milliseconds (default: 300000 / 5 minutes)
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REFRESH_TOKEN=
