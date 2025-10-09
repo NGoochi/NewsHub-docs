@@ -301,13 +301,15 @@ Handles all Gemini API communication
 
 Loads prompt templates from database (PromptTemplate table) with 5-minute cache
 
-Implements analyzeArticles() - sends up to 10 articles, returns analysis
+Implements analyzeArticles() - analyzes articles in configurable batches, returns analysis
 
 Implements extractQuotes() - extracts stakeholder quotes
 
 Loads category definitions from database (Category table) with 5-minute cache
 
 Exports clearPromptCache() - called when categories are updated via API
+
+Configurable batch size via GEMINI_BATCH_SIZE environment variable (default: 10 articles)
 
 Configurable timeout via GEMINI_TIMEOUT_MS environment variable (default: 300000ms / 5 minutes)
 
@@ -386,6 +388,7 @@ NEWS_API_KEY=
 NEWSAPI_MAX_TOTAL_ARTICLES=100  # Max articles per NewsAPI search (default: 100)
 GEMINI_API_KEY=
 GEMINI_TIMEOUT_MS=300000  # Gemini API timeout in milliseconds (default: 300000 / 5 minutes)
+GEMINI_BATCH_SIZE=10  # Max articles per Gemini analysis batch (default: 10)
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REFRESH_TOKEN=
