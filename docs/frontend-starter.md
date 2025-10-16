@@ -67,7 +67,7 @@ Body: { "name": "COP30 Coverage", "description": "..." }
 **List Projects:**
 ```
 GET /projects
-→ Returns array of projects with article counts
+→ Returns array of projects with article counts and archived status
 ```
 
 **Get Project Details:**
@@ -76,10 +76,36 @@ GET /projects/:id
 → Returns project with related articles
 ```
 
+**Archive Project:**
+```
+PUT /projects/:id/archive
+→ Sets archived = true
+```
+
+**Unarchive Project:**
+```
+PUT /projects/:id/unarchive
+→ Sets archived = false
+```
+
+**Bulk Archive Projects:**
+```
+POST /projects/bulk-archive
+Body: { "projectIds": ["uuid1", "uuid2", ...] }
+→ Archives multiple projects
+```
+
+**Bulk Unarchive Projects:**
+```
+POST /projects/bulk-unarchive
+Body: { "projectIds": ["uuid1", "uuid2", ...] }
+→ Unarchives multiple projects
+```
+
 **Delete Project:**
 ```
 DELETE /projects/:id
-→ Removes project and all articles/quotes
+→ Removes project and all articles/quotes (only if archived)
 ```
 
 ---
@@ -420,10 +446,12 @@ Track:
 Build in order of user workflow:
 
 ### Phase 1: Projects (Foundation)
-1. Dashboard page with project list
+1. Dashboard page with project list (showing archived status)
 2. Create project modal
-3. Delete project with confirmation
-4. Navigate to project page
+3. Archive/unarchive project functionality
+4. Bulk archive/unarchive operations
+5. Delete project with confirmation (only if archived)
+6. Navigate to project page
 
 ### Phase 2: Import (Data Entry)
 1. Import form with preview
@@ -470,11 +498,15 @@ Build in order of user workflow:
 ### Projects
 | Method | Endpoint | Body | Returns |
 |--------|----------|------|---------|
-| GET | `/projects` | — | Array of projects |
+| GET | `/projects` | — | Array of projects (includes `archived` field) |
 | GET | `/projects/:id` | — | Single project with articles |
 | POST | `/projects` | `{ name, description }` | Created project |
 | PUT | `/projects/:id` | `{ name, description }` | Updated project |
-| DELETE | `/projects/:id` | — | Success confirmation |
+| PUT | `/projects/:id/archive` | — | Archived project |
+| PUT | `/projects/:id/unarchive` | — | Unarchived project |
+| POST | `/projects/bulk-archive` | `{ projectIds: string[] }` | Bulk archive confirmation |
+| POST | `/projects/bulk-unarchive` | `{ projectIds: string[] }` | Bulk unarchive confirmation |
+| DELETE | `/projects/:id` | — | Success confirmation (only if archived) |
 
 ### Import
 | Method | Endpoint | Body | Returns |
@@ -592,8 +624,10 @@ Your frontend is ready when:
 - [ ] Install dependencies: TailwindCSS, Shadcn/UI, TanStack Query, Axios
 - [ ] Configure Tailwind with design tokens
 - [ ] Create API client utility (base URL, error handling)
-- [ ] Build Dashboard with project list
+- [ ] Build Dashboard with project list (including archived status)
 - [ ] Implement project creation modal
+- [ ] Implement archive/unarchive project functionality
+- [ ] Implement bulk archive/unarchive operations
 - [ ] Build Project page with article table
 - [ ] Implement import workflow with preview + progress
 - [ ] Implement analysis workflow with batch creation + progress
