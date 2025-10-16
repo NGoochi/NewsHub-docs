@@ -49,7 +49,39 @@ All API endpoints follow this structure:
 ```
 
 ### Authentication
-Currently **none** — this is a single-user application. OAuth may be added in the future.
+JWT token-based authentication with a single app password.
+
+**Login Flow:**
+1. User enters password on login page
+2. Frontend sends to `POST /auth/login` with `{ password }`
+3. Backend returns JWT token valid for 24 hours
+4. Frontend stores token in localStorage or cookie
+5. Frontend includes token in all API requests
+
+**Example Login:**
+```typescript
+const response = await fetch('http://localhost:8080/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ password: 'your_password' })
+});
+const { data } = await response.json();
+localStorage.setItem('authToken', data.token);
+```
+
+**Example Authenticated Request:**
+```typescript
+const token = localStorage.getItem('authToken');
+const response = await fetch('http://localhost:8080/projects', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
+**401/403 Handling:**
+- 401 (Unauthorized): No token provided - redirect to login
+- 403 (Forbidden): Invalid/expired token - redirect to login
 
 ---
 
@@ -560,6 +592,12 @@ Build in order of user workflow:
 |--------|----------|------|---------|
 | POST | `/export/:projectId` | — | Google Sheet URL |
 
+### Authentication
+| Method | Endpoint | Body | Returns |
+|--------|----------|------|---------|
+| POST | `/auth/login` | `{ password: string }` | JWT token + expiry |
+| GET | `/auth/verify` | — (requires Authorization header) | Token validity status |
+
 ---
 
 ## 🧪 Testing the Backend
@@ -624,6 +662,10 @@ Your frontend is ready when:
 - [ ] Install dependencies: TailwindCSS, Shadcn/UI, TanStack Query, Axios
 - [ ] Configure Tailwind with design tokens
 - [ ] Create API client utility (base URL, error handling)
+- [ ] Implement login page with password input
+- [ ] Store JWT token in localStorage/cookies
+- [ ] Add Authorization header to all API requests
+- [ ] Handle 401/403 errors with redirect to login
 - [ ] Build Dashboard with project list (including archived status)
 - [ ] Implement project creation modal
 - [ ] Implement archive/unarchive project functionality
