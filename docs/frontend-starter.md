@@ -48,6 +48,23 @@ All API endpoints follow this structure:
 }
 ```
 
+**Common Error Examples:**
+```json
+// Authentication errors
+{ "success": false, "error": "Access token required" }
+{ "success": false, "error": "Invalid token" }
+{ "success": false, "error": "Token expired" }
+{ "success": false, "error": "Invalid password" }
+
+// Validation errors
+{ "success": false, "error": "Missing required fields: name, description" }
+{ "success": false, "error": "Invalid project ID format" }
+
+// Not found errors
+{ "success": false, "error": "Project not found" }
+{ "success": false, "error": "Article not found" }
+```
+
 ### Authentication
 JWT token-based authentication with a single app password.
 
@@ -66,7 +83,9 @@ const response = await fetch('http://localhost:8080/auth/login', {
   body: JSON.stringify({ password: 'your_password' })
 });
 const { data } = await response.json();
+// Response format: { token, expiresIn, expiresAt }
 localStorage.setItem('authToken', data.token);
+localStorage.setItem('tokenExpiry', data.expiresAt);
 ```
 
 **Example Authenticated Request:**
@@ -82,6 +101,59 @@ const response = await fetch('http://localhost:8080/projects', {
 **401/403 Handling:**
 - 401 (Unauthorized): No token provided - redirect to login
 - 403 (Forbidden): Invalid/expired token - redirect to login
+
+**Token Verification:**
+```typescript
+// Check if token is still valid
+const response = await fetch('http://localhost:8080/auth/verify', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const { data } = await response.json();
+// Response: { valid: true, user: {...} }
+```
+
+**Token Management Best Practices:**
+```typescript
+// 1. Check token expiry before making requests
+const tokenExpiry = localStorage.getItem('tokenExpiry');
+if (tokenExpiry && new Date() > new Date(tokenExpiry)) {
+  // Token expired, redirect to login
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('tokenExpiry');
+  window.location.href = '/login';
+}
+
+// 2. Create API client with automatic token handling
+class ApiClient {
+  private baseURL = 'http://localhost:8080';
+  
+  private getAuthHeaders() {
+    const token = localStorage.getItem('authToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }
+  
+  async request(endpoint: string, options: RequestInit = {}) {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
+        ...options.headers
+      }
+    });
+    
+    if (response.status === 401 || response.status === 403) {
+      // Token invalid/expired, redirect to login
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('tokenExpiry');
+      window.location.href = '/login';
+      return;
+    }
+    
+    return response.json();
+  }
+}
+```
 
 ---
 
@@ -595,8 +667,8 @@ Build in order of user workflow:
 ### Authentication
 | Method | Endpoint | Body | Returns |
 |--------|----------|------|---------|
-| POST | `/auth/login` | `{ password: string }` | JWT token + expiry |
-| GET | `/auth/verify` | — (requires Authorization header) | Token validity status |
+| POST | `/auth/login` | `{ password: string }` | `{ token, expiresIn, expiresAt }` |
+| GET | `/auth/verify` | — (requires Authorization header) | `{ valid: true, user: {...} }` |
 
 ---
 
@@ -609,13 +681,24 @@ Before building UI, test endpoints using:
 
 Example test:
 ```bash
-# Create a project
+# 1. Test login (get token)
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"password":"your_app_password"}'
+
+# 2. Test protected endpoint (use token from step 1)
 curl -X POST http://localhost:8080/projects \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{"name":"Test Project","description":"Testing API"}'
 
-# List projects
-curl http://localhost:8080/projects
+# 3. List projects (requires token)
+curl http://localhost:8080/projects \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# 4. Test token verification
+curl http://localhost:8080/auth/verify \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
 ---
